@@ -1,30 +1,30 @@
-public class TokenBucket {
-    private final long capacity;
-    private final long refillRatePerSecond;
-    private double tokens;
-    private long lastRefillTimestamp;
+public class LeakyBucket {
+    private final int capacity;
+    private final long leakRatePerSecond;
+    private double water;
+    private long lastUpdateTime;
 
-    public TokenBucket(long capacity, long refillRatePerSecond) {
+    public LeakyBucket(int capacity, long leakRatePerSecond) {
         this.capacity = capacity;
-        this.refillRatePerSecond = refillRatePerSecond;
-        this.tokens = capacity;
-        this.lastRefillTimestamp = System.nanoTime();
+        this.leakRatePerSecond = leakRatePerSecond;
+        this.water = 0;
+        this.lastUpdateTime = System.nanoTime();
     }
 
     public synchronized boolean allowRequest() {
-        refill();
-        if (tokens >= 1) {
-            tokens -= 1;
+        leak();
+        if (water < capacity) {
+            water += 1;
             return true;
         }
         return false;
     }
 
-    private void refill() {
+    private void leak() {
         long now = System.nanoTime();
-        double secondsPassed = (now - lastRefillTimestamp) / 1_000_000_000.0;
-        double tokensToAdd = secondsPassed * refillRatePerSecond;
-        tokens = Math.min(capacity, tokens + tokensToAdd);
-        lastRefillTimestamp = now;
+        double secondsPassed = (now - lastUpdateTime) / 1_000_000_000.0;
+        double leaked = secondsPassed * leakRatePerSecond;
+        water = Math.max(0, water - leaked);
+        lastUpdateTime = now;
     }
 }
